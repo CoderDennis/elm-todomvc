@@ -2,6 +2,8 @@ module TodoMVC exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (on, onInput, keyCode, onClick)
+import Json.Decode exposing (andThen, succeed, fail)
 
 
 type alias Todo =
@@ -19,16 +21,38 @@ type FilterState
 
 type alias Model =
     { todos : List Todo
-    , todo : Maybe Todo
+    , newText : String
     , filter : FilterState
     }
 
 
 type Msg
-    = Add Todo
-    | Complete Todo
+    = Add
+    | ToggleAll
+    | Input String
+    | ToggleCompleted Todo
     | Delete Todo
     | Filter FilterState
+
+
+newTodo : String -> Todo
+newTodo text =
+    { title = text
+    , completed = False
+    , editing = False
+    }
+
+
+onEnter : Msg -> Attribute Msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                succeed msg
+            else
+                fail "not ENTER"
+    in
+        on "keydown" (andThen isEnter keyCode)
 
 
 view : Model -> Html Msg
@@ -40,6 +64,9 @@ view model =
                 [ class "new-todo"
                 , placeholder "What needs to be done?"
                 , autofocus True
+                , onInput Input
+                , onEnter Add
+                , value model.newText
                 ]
                 []
             ]
@@ -75,6 +102,7 @@ viewTodo todo =
                 [ class "toggle"
                 , type_ "checkbox"
                 , checked todo.completed
+                , onClick (ToggleCompleted todo)
                 ]
                 []
             , label []
@@ -107,7 +135,7 @@ viewFooter todos =
         footer [ class "footer" ]
             [ span [ class "todo-count" ]
                 [ strong [] [ text (toString (countIncomplete todos)) ]
-                , text "items left"
+                , text " items left"
                 ]
             , ul [ class "filters" ]
                 [ li []
@@ -135,13 +163,39 @@ countIncomplete todos =
 
 update : Msg -> Model -> Model
 update msg model =
-    model
+    case msg of
+        Add ->
+            { model
+                | todos = (newTodo model.newText) :: model.todos
+                , newText = ""
+            }
+
+        Input text ->
+            { model | newText = text }
+
+        ToggleCompleted todo ->
+            { model | todos = (toggleTodo todo model.todos) }
+
+        _ ->
+            model
+
+
+toggleTodo : Todo -> List Todo -> List Todo
+toggleTodo todo todos =
+    let
+        toggle t =
+            if t == todo then
+                { t | completed = not todo.completed }
+            else
+                t
+    in
+        List.map toggle todos
 
 
 initialModel : Model
 initialModel =
     { todos = []
-    , todo = Nothing
+    , newText = ""
     , filter = All
     }
 
@@ -158,7 +212,7 @@ testModel =
           , editing = False
           }
         ]
-    , todo = Nothing
+    , newText = ""
     , filter = All
     }
 
