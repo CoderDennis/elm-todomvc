@@ -129,7 +129,11 @@ viewTodo todo =
                 []
             , label []
                 [ text todo.title ]
-            , button [ class "destroy" ] []
+            , button
+                [ class "destroy"
+                , onClick (Delete todo)
+                ]
+                []
             ]
         , input
             [ class "edit"
@@ -212,6 +216,11 @@ update msg model =
 
         ToggleAll ->
             { model | todos = (toggleAll model.todos) }
+
+        Delete todo ->
+            { model
+                | todos = model.todos |> List.filter (\t -> t /= todo)
+            }
 
         _ ->
             model
