@@ -13,13 +13,8 @@ import Html.Events
         )
 import Json.Decode exposing (andThen, succeed, fail)
 import Json.Encode as Json
-
-
-{-
-   TODO: set focus on edit box after double click. Evan has example in his
-   TodoMVC implemenation, but I don't want to look at that yet.
-   https://github.com/evancz/elm-todomvc
--}
+import Task
+import Dom
 
 
 type alias Todo =
@@ -48,10 +43,12 @@ type Msg
     | Input String
     | ToggleCompleted Todo
     | Delete Todo
-    | Edit Todo Bool
+    | Edit Todo Int
+    | CancelEdit Todo
     | TodoInput Todo String
     | ClearCompleted
     | Filter FilterState
+    | NoOp
 
 
 newTodo : String -> Todo
@@ -127,7 +124,7 @@ viewTodos model =
                 , ul [ class "todo-list" ]
                     (model.todos
                         |> List.filter (showTodo model.filter)
-                        |> List.map viewTodo
+                        |> List.indexedMap viewTodo
                     )
                 ]
 
@@ -150,8 +147,8 @@ showTodo filter todo =
             todo.completed
 
 
-viewTodo : Todo -> Html Msg
-viewTodo todo =
+viewTodo : Int -> Todo -> Html Msg
+viewTodo index todo =
     li (todoLiClass todo)
         [ div [ class "view" ]
             [ input
@@ -161,7 +158,7 @@ viewTodo todo =
                 , onClick (ToggleCompleted todo)
                 ]
                 []
-            , label [ onDoubleClick (Edit todo True) ]
+            , label [ onDoubleClick (Edit todo index) ]
                 [ text todo.title ]
             , button
                 [ class "destroy"
@@ -170,14 +167,20 @@ viewTodo todo =
                 []
             ]
         , input
-            [ class "edit"
+            [ id (editId index)
+            , class "edit"
             , value todo.title
             , onInput (TodoInput todo)
-            , onBlur (Edit todo False)
-            , onEnter (Edit todo False)
+            , onBlur (CancelEdit todo)
+            , onEnter (CancelEdit todo)
             ]
             []
         ]
+
+
+editId : Int -> String
+editId index =
+    "todo-edit-" ++ (toString index)
 
 
 todoLiClass : Todo -> List (Attribute Msg)
@@ -275,48 +278,70 @@ countIncomplete todos =
         |> List.length
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Add ->
-            { model
+            ( { model
                 | todos = (newTodo model.newText) :: model.todos
                 , newText = ""
-            }
+              }
+            , Cmd.none
+            )
 
         Input text ->
-            { model | newText = text }
+            ( { model | newText = text }, Cmd.none )
 
         ToggleCompleted todo ->
-            { model | todos = (toggleTodo todo model.todos) }
+            ( { model | todos = (toggleTodo todo model.todos) }, Cmd.none )
 
         ToggleAll ->
-            { model | todos = (toggleAll model.todos) }
+            ( { model | todos = (toggleAll model.todos) }, Cmd.none )
 
         Delete todo ->
-            { model
+            ( { model
                 | todos = model.todos |> List.filter (\t -> t /= todo)
-            }
+              }
+            , Cmd.none
+            )
 
         ClearCompleted ->
-            { model
+            ( { model
                 | todos = model.todos |> List.filter (\t -> not t.completed)
-            }
+              }
+            , Cmd.none
+            )
 
-        Edit todo editing ->
-            { model
-                | todos = (setEditing editing todo model.todos)
-            }
+        Edit todo index ->
+            ( { model
+                | todos = (setEditing True todo model.todos)
+              }
+            , Task.attempt (\_ -> NoOp) (Dom.focus (editId index))
+            )
+
+        CancelEdit todo ->
+            ( { model
+                | todos = (setEditing False todo model.todos)
+              }
+            , Cmd.none
+            )
 
         TodoInput todo text ->
-            { model
+            ( { model
                 | todos = (setTitle text todo model.todos)
-            }
+              }
+            , Cmd.none
+            )
 
         Filter state ->
-            { model
+            ( { model
                 | filter = state
-            }
+              }
+            , Cmd.none
+            )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 setTitle : String -> Todo -> List Todo -> List Todo
@@ -393,8 +418,9 @@ testModel =
 
 
 main =
-    Html.beginnerProgram
-        { model = testModel
+    Html.program
+        { init = ( initialModel, Cmd.none )
         , view = view
         , update = update
+        , subscriptions = (\_ -> Sub.none)
         }
