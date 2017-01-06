@@ -2,9 +2,24 @@ module TodoMVC exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (on, onInput, keyCode, onClick)
+import Html.Events
+    exposing
+        ( on
+        , onInput
+        , keyCode
+        , onClick
+        , onDoubleClick
+        , onBlur
+        )
 import Json.Decode exposing (andThen, succeed, fail)
 import Json.Encode as Json
+
+
+{-
+   TODO: set focus on edit box after double click. Evan has example in his
+   TodoMVC implemenation, but I don't want to look at that yet.
+   https://github.com/evancz/elm-todomvc
+-}
 
 
 type alias Todo =
@@ -33,6 +48,8 @@ type Msg
     | Input String
     | ToggleCompleted Todo
     | Delete Todo
+    | Edit Todo Bool
+    | TodoInput Todo String
     | ClearCompleted
     | Filter FilterState
 
@@ -128,7 +145,7 @@ viewTodo todo =
                 , onClick (ToggleCompleted todo)
                 ]
                 []
-            , label []
+            , label [ onDoubleClick (Edit todo True) ]
                 [ text todo.title ]
             , button
                 [ class "destroy"
@@ -139,6 +156,9 @@ viewTodo todo =
         , input
             [ class "edit"
             , value todo.title
+            , onInput (TodoInput todo)
+            , onBlur (Edit todo False)
+            , onEnter (Edit todo False)
             ]
             []
         ]
@@ -245,8 +265,42 @@ update msg model =
                 | todos = model.todos |> List.filter (\t -> not t.completed)
             }
 
+        Edit todo editing ->
+            { model
+                | todos = (setEditing editing todo model.todos)
+            }
+
+        TodoInput todo text ->
+            { model
+                | todos = (setTitle text todo model.todos)
+            }
+
         _ ->
             model
+
+
+setTitle : String -> Todo -> List Todo -> List Todo
+setTitle text todo todos =
+    let
+        set text t =
+            if t == todo then
+                { t | title = text }
+            else
+                t
+    in
+        List.map (set text) todos
+
+
+setEditing : Bool -> Todo -> List Todo -> List Todo
+setEditing editing todo todos =
+    let
+        set e t =
+            if t == todo then
+                { t | editing = e }
+            else
+                t
+    in
+        List.map (set editing) todos
 
 
 toggleTodo : Todo -> List Todo -> List Todo
