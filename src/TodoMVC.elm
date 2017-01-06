@@ -129,29 +129,41 @@ todoLiClass todo =
 
 viewFooter : List Todo -> Html Msg
 viewFooter todos =
-    if List.isEmpty todos then
-        text ""
-    else
-        footer [ class "footer" ]
-            [ span [ class "todo-count" ]
-                [ strong [] [ text (toString (countIncomplete todos)) ]
-                , text " items left"
-                ]
-            , ul [ class "filters" ]
-                [ li []
-                    [ a
-                        [ class "selected"
-                        , href ""
-                        ]
-                        [ text "All" ]
-                    , a [ href "" ]
-                        [ text "Active" ]
-                    , a [ href "" ]
-                        [ text "Completed" ]
+    let
+        count =
+            countIncomplete todos
+    in
+        if List.isEmpty todos then
+            text ""
+        else
+            footer [ class "footer" ]
+                [ span [ class "todo-count" ]
+                    [ strong [] [ text (toString count) ]
+                    , text (" " ++ (pluralize count "item") ++ " left")
                     ]
+                , ul [ class "filters" ]
+                    [ li []
+                        [ a
+                            [ class "selected"
+                            , href ""
+                            ]
+                            [ text "All" ]
+                        , a [ href "" ]
+                            [ text "Active" ]
+                        , a [ href "" ]
+                            [ text "Completed" ]
+                        ]
+                    ]
+                , button [ class "clear-completed" ] [ text "Clear completed" ]
                 ]
-            , button [ class "clear-completed" ] [ text "Clear completed" ]
-            ]
+
+
+pluralize : Int -> String -> String
+pluralize count noun =
+    if count == 1 then
+        noun
+    else
+        noun ++ "s"
 
 
 countIncomplete : List Todo -> Int
