@@ -33,6 +33,7 @@ type Msg
     | Input String
     | ToggleCompleted Todo
     | Delete Todo
+    | ClearCompleted
     | Filter FilterState
 
 
@@ -180,8 +181,25 @@ viewFooter todos =
                             [ text "Completed" ]
                         ]
                     ]
-                , button [ class "clear-completed" ] [ text "Clear completed" ]
+                , viewClearCompleted todos
                 ]
+
+
+viewClearCompleted : List Todo -> Html Msg
+viewClearCompleted todos =
+    let
+        anyComplete =
+            todos
+                |> List.any (\t -> t.completed)
+    in
+        if anyComplete then
+            button
+                [ class "clear-completed"
+                , onClick ClearCompleted
+                ]
+                [ text "Clear completed" ]
+        else
+            text ""
 
 
 pluralize : Int -> String -> String
@@ -220,6 +238,11 @@ update msg model =
         Delete todo ->
             { model
                 | todos = model.todos |> List.filter (\t -> t /= todo)
+            }
+
+        ClearCompleted ->
+            { model
+                | todos = model.todos |> List.filter (\t -> not t.completed)
             }
 
         _ ->
