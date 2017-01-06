@@ -4,6 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (on, onInput, keyCode, onClick)
 import Json.Decode exposing (andThen, succeed, fail)
+import Json.Encode as Json
 
 
 type alias Todo =
@@ -80,18 +81,39 @@ viewTodos todos =
     if List.isEmpty todos then
         text ""
     else
-        section [ class "main" ]
-            [ input
-                [ class "toggle-all"
-                , type_ "checkbox"
+        let
+            incomplete =
+                countIncomplete todos
+
+            count =
+                List.length todos
+
+            allChecked =
+                incomplete == 0
+
+            someChecked =
+                incomplete < count && incomplete > 0
+        in
+            section [ class "main" ]
+                [ input
+                    [ class "toggle-all"
+                    , type_ "checkbox"
+                    , checked allChecked
+                    , indeterminate someChecked
+                    , onClick ToggleAll
+                    ]
+                    []
+                , label [ for "toggle-all" ]
+                    [ text "Mark all as complete"
+                    ]
+                , ul [ class "todo-list" ]
+                    (List.map viewTodo todos)
                 ]
-                []
-            , label [ for "toggle-all" ]
-                [ text "Mark all as complete"
-                ]
-            , ul [ class "todo-list" ]
-                (List.map viewTodo todos)
-            ]
+
+
+indeterminate : Bool -> Attribute msg
+indeterminate bool =
+    property "indeterminate" (Json.bool bool)
 
 
 viewTodo : Todo -> Html Msg
@@ -129,13 +151,13 @@ todoLiClass todo =
 
 viewFooter : List Todo -> Html Msg
 viewFooter todos =
-    let
-        count =
-            countIncomplete todos
-    in
-        if List.isEmpty todos then
-            text ""
-        else
+    if List.isEmpty todos then
+        text ""
+    else
+        let
+            count =
+                countIncomplete todos
+        in
             footer [ class "footer" ]
                 [ span [ class "todo-count" ]
                     [ strong [] [ text (toString count) ]
@@ -188,6 +210,9 @@ update msg model =
         ToggleCompleted todo ->
             { model | todos = (toggleTodo todo model.todos) }
 
+        ToggleAll ->
+            { model | todos = (toggleAll model.todos) }
+
         _ ->
             model
 
@@ -200,6 +225,18 @@ toggleTodo todo todos =
                 { t | completed = not todo.completed }
             else
                 t
+    in
+        List.map toggle todos
+
+
+toggleAll : List Todo -> List Todo
+toggleAll todos =
+    let
+        allChecked =
+            (countIncomplete todos) == 0
+
+        toggle t =
+            { t | completed = not allChecked }
     in
         List.map toggle todos
 
