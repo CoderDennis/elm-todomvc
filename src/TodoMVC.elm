@@ -89,22 +89,22 @@ view model =
                 ]
                 []
             ]
-        , viewTodos model.todos
-        , viewFooter model.todos
+        , viewTodos model
+        , viewFooter model
         ]
 
 
-viewTodos : List Todo -> Html Msg
-viewTodos todos =
-    if List.isEmpty todos then
+viewTodos : Model -> Html Msg
+viewTodos model =
+    if List.isEmpty model.todos then
         text ""
     else
         let
             incomplete =
-                countIncomplete todos
+                countIncomplete model.todos
 
             count =
-                List.length todos
+                List.length model.todos
 
             allChecked =
                 incomplete == 0
@@ -125,13 +125,29 @@ viewTodos todos =
                     [ text "Mark all as complete"
                     ]
                 , ul [ class "todo-list" ]
-                    (List.map viewTodo todos)
+                    (model.todos
+                        |> List.filter (showTodo model.filter)
+                        |> List.map viewTodo
+                    )
                 ]
 
 
 indeterminate : Bool -> Attribute msg
 indeterminate bool =
     property "indeterminate" (Json.bool bool)
+
+
+showTodo : FilterState -> Todo -> Bool
+showTodo filter todo =
+    case filter of
+        All ->
+            True
+
+        Active ->
+            not todo.completed
+
+        Completed ->
+            todo.completed
 
 
 viewTodo : Todo -> Html Msg
@@ -174,35 +190,57 @@ todoLiClass todo =
         []
 
 
-viewFooter : List Todo -> Html Msg
-viewFooter todos =
-    if List.isEmpty todos then
+viewFooter : Model -> Html Msg
+viewFooter model =
+    if List.isEmpty model.todos then
         text ""
     else
         let
             count =
-                countIncomplete todos
+                countIncomplete model.todos
         in
             footer [ class "footer" ]
                 [ span [ class "todo-count" ]
                     [ strong [] [ text (toString count) ]
                     , text (" " ++ (pluralize count "item") ++ " left")
                     ]
-                , ul [ class "filters" ]
-                    [ li []
-                        [ a
-                            [ class "selected"
-                            , href ""
-                            ]
-                            [ text "All" ]
-                        , a [ href "" ]
-                            [ text "Active" ]
-                        , a [ href "" ]
-                            [ text "Completed" ]
-                        ]
-                    ]
-                , viewClearCompleted todos
+                , viewFilters model.filter
+                , viewClearCompleted model.todos
                 ]
+
+
+viewFilters : FilterState -> Html Msg
+viewFilters filter =
+    ul [ class "filters" ]
+        [ li []
+            [ a
+                [ class (filterClass filter All)
+                , href "#"
+                , onClick (Filter All)
+                ]
+                [ text "All" ]
+            , a
+                [ class (filterClass filter Active)
+                , href "#"
+                , onClick (Filter Active)
+                ]
+                [ text "Active" ]
+            , a
+                [ class (filterClass filter Completed)
+                , href "#"
+                , onClick (Filter Completed)
+                ]
+                [ text "Completed" ]
+            ]
+        ]
+
+
+filterClass : FilterState -> FilterState -> String
+filterClass a b =
+    if a == b then
+        "selected"
+    else
+        ""
 
 
 viewClearCompleted : List Todo -> Html Msg
@@ -275,8 +313,10 @@ update msg model =
                 | todos = (setTitle text todo model.todos)
             }
 
-        _ ->
-            model
+        Filter state ->
+            { model
+                | filter = state
+            }
 
 
 setTitle : String -> Todo -> List Todo -> List Todo
