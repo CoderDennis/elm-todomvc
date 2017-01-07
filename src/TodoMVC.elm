@@ -149,7 +149,12 @@ showTodo filter todo =
 
 viewTodo : Int -> Todo -> Html Msg
 viewTodo index todo =
-    li (todoLiClass todo)
+    li
+        [ classList
+            [ ( "editing", todo.editing )
+            , ( "completed", todo.completed )
+            ]
+        ]
         [ div [ class "view" ]
             [ input
                 [ class "toggle"
@@ -183,16 +188,6 @@ editId index =
     "todo-edit-" ++ (toString index)
 
 
-todoLiClass : Todo -> List (Attribute Msg)
-todoLiClass todo =
-    if todo.editing then
-        [ class "editing" ]
-    else if todo.completed then
-        [ class "completed" ]
-    else
-        []
-
-
 viewFooter : Model -> Html Msg
 viewFooter model =
     if List.isEmpty model.todos then
@@ -217,33 +212,25 @@ viewFilters filter =
     ul [ class "filters" ]
         [ li []
             [ a
-                [ class (filterClass filter All)
+                [ classList [ ( "selected", filter == All ) ]
                 , href "#"
                 , onClick (Filter All)
                 ]
                 [ text "All" ]
             , a
-                [ class (filterClass filter Active)
+                [ classList [ ( "selected", filter == Active ) ]
                 , href "#"
                 , onClick (Filter Active)
                 ]
                 [ text "Active" ]
             , a
-                [ class (filterClass filter Completed)
+                [ classList [ ( "selected", filter == Completed ) ]
                 , href "#"
                 , onClick (Filter Completed)
                 ]
                 [ text "Completed" ]
             ]
         ]
-
-
-filterClass : FilterState -> FilterState -> String
-filterClass a b =
-    if a == b then
-        "selected"
-    else
-        ""
 
 
 viewClearCompleted : List Todo -> Html Msg
