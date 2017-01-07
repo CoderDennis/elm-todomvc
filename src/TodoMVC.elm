@@ -331,40 +331,31 @@ update msg model =
             ( model, Cmd.none )
 
 
+updateItemInList : (a -> a) -> a -> List a -> List a
+updateItemInList fn item list =
+    let
+        update i =
+            if i == item then
+                fn item
+            else
+                i
+    in
+        List.map update list
+
+
 setTitle : String -> Todo -> List Todo -> List Todo
 setTitle text todo todos =
-    let
-        set text t =
-            if t == todo then
-                { t | title = text }
-            else
-                t
-    in
-        List.map (set text) todos
+    updateItemInList (\t -> { t | title = text }) todo todos
 
 
 setEditing : Bool -> Todo -> List Todo -> List Todo
-setEditing editing todo todos =
-    let
-        set e t =
-            if t == todo then
-                { t | editing = e }
-            else
-                t
-    in
-        List.map (set editing) todos
+setEditing e todo todos =
+    updateItemInList (\t -> { t | editing = e }) todo todos
 
 
 toggleTodo : Todo -> List Todo -> List Todo
 toggleTodo todo todos =
-    let
-        toggle t =
-            if t == todo then
-                { t | completed = not todo.completed }
-            else
-                t
-    in
-        List.map toggle todos
+    updateItemInList (\t -> { t | completed = not t.completed }) todo todos
 
 
 toggleAll : List Todo -> List Todo
