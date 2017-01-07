@@ -21,6 +21,7 @@ type alias Todo =
     { title : String
     , completed : Bool
     , editing : Bool
+    , identifier : Int
     }
 
 
@@ -34,6 +35,7 @@ type alias Model =
     { todos : List Todo
     , newText : String
     , filter : FilterState
+    , nextIdentifier : Int
     }
 
 
@@ -43,7 +45,7 @@ type Msg
     | Input String
     | ToggleCompleted Todo
     | Delete Todo
-    | Edit Todo Int
+    | Edit Todo
     | CancelEdit Todo
     | TodoInput Todo String
     | ClearCompleted
@@ -51,11 +53,12 @@ type Msg
     | NoOp
 
 
-newTodo : String -> Todo
-newTodo text =
+newTodo : String -> Int -> Todo
+newTodo text id =
     { title = text
     , completed = False
     , editing = False
+    , identifier = id
     }
 
 
@@ -124,7 +127,7 @@ viewTodos model =
                 , ul [ class "todo-list" ]
                     (model.todos
                         |> List.filter (showTodo model.filter)
-                        |> List.indexedMap viewTodo
+                        |> List.map viewTodo
                     )
                 ]
 
@@ -147,8 +150,8 @@ showTodo filter todo =
             todo.completed
 
 
-viewTodo : Int -> Todo -> Html Msg
-viewTodo index todo =
+viewTodo : Todo -> Html Msg
+viewTodo todo =
     li
         [ classList
             [ ( "editing", todo.editing )
@@ -163,7 +166,7 @@ viewTodo index todo =
                 , onClick (ToggleCompleted todo)
                 ]
                 []
-            , label [ onDoubleClick (Edit todo index) ]
+            , label [ onDoubleClick (Edit todo) ]
                 [ text todo.title ]
             , button
                 [ class "destroy"
@@ -172,7 +175,7 @@ viewTodo index todo =
                 []
             ]
         , input
-            [ id (editId index)
+            [ id (editId todo.identifier)
             , class "edit"
             , value todo.title
             , onInput (TodoInput todo)
@@ -184,8 +187,8 @@ viewTodo index todo =
 
 
 editId : Int -> String
-editId index =
-    "todo-edit-" ++ (toString index)
+editId identifier =
+    "todo-edit-" ++ (toString identifier)
 
 
 viewFooter : Model -> Html Msg
@@ -270,8 +273,9 @@ update msg model =
     case msg of
         Add ->
             ( { model
-                | todos = (newTodo model.newText) :: model.todos
+                | todos = (newTodo model.newText model.nextIdentifier) :: model.todos
                 , newText = ""
+                , nextIdentifier = model.nextIdentifier + 1
               }
             , Cmd.none
             )
@@ -299,11 +303,11 @@ update msg model =
             , Cmd.none
             )
 
-        Edit todo index ->
+        Edit todo ->
             ( { model
                 | todos = (setEditing True todo model.todos)
               }
-            , Task.attempt (\_ -> NoOp) (Dom.focus (editId index))
+            , Task.attempt (\_ -> NoOp) (Dom.focus (editId todo.identifier))
             )
 
         CancelEdit todo ->
@@ -375,6 +379,7 @@ initialModel =
     { todos = []
     , newText = ""
     , filter = All
+    , nextIdentifier = 1
     }
 
 
@@ -384,14 +389,17 @@ testModel =
         [ { title = "Taste JavaScript"
           , completed = True
           , editing = False
+          , identifier = 1
           }
         , { title = "Buy a unicorn"
           , completed = False
           , editing = False
+          , identifier = 2
           }
         ]
     , newText = ""
     , filter = All
+    , nextIdentifier = 3
     }
 
 
