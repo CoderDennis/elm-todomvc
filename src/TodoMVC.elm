@@ -335,12 +335,12 @@ update msg model =
             ( model, Cmd.none )
 
 
-updateItemInList : (a -> a) -> a -> List a -> List a
-updateItemInList fn item list =
+updateItemInList : (a -> a) -> (a -> comparable) -> a -> List a -> List a
+updateItemInList transform id item list =
     let
         update i =
-            if i == item then
-                fn item
+            if (id i) == (id item) then
+                transform item
             else
                 i
     in
@@ -349,17 +349,17 @@ updateItemInList fn item list =
 
 setTitle : String -> Todo -> List Todo -> List Todo
 setTitle text todo todos =
-    updateItemInList (\t -> { t | title = text }) todo todos
+    updateItemInList (\t -> { t | title = text }) .identifier todo todos
 
 
 setEditing : Bool -> Todo -> List Todo -> List Todo
 setEditing e todo todos =
-    updateItemInList (\t -> { t | editing = e }) todo todos
+    updateItemInList (\t -> { t | editing = e }) .identifier todo todos
 
 
 toggleTodo : Todo -> List Todo -> List Todo
 toggleTodo todo todos =
-    updateItemInList (\t -> { t | completed = not t.completed }) todo todos
+    updateItemInList (\t -> { t | completed = not t.completed }) .identifier todo todos
 
 
 toggleAll : List Todo -> List Todo
